@@ -108,7 +108,6 @@ This project is licensed under the **MIT License**. See the LICENSE file for mor
 
 ## Links
 
-- [LibreTranslate API Documentation](https://libretranslate.com/docs)
 - [LibreTranslate API GitHub](https://github.com/LibreTranslate/LibreTranslate)
 
 ---
