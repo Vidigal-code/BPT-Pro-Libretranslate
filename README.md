@@ -54,7 +54,7 @@ Once configured, simply select text on any webpage, and the translation will app
 
 1. **Select Text**: Highlight the text on a webpage.
 2. **Translation Popup**: The translation of the selected text will appear in a popup.
-3. **Close Popup**: Click the "X" button on the popup to close it.
+3. **Close Popup**: Click the "Close" button on the popup to close it.
 4. **Configure Settings**: If needed, you can change the API URL, API key, or target language via the settings page.
 
 ## Example Code
