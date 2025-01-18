@@ -1,8 +1,33 @@
-let isTranslationSent = false;
-
 const storageAPI = (typeof chrome !== "undefined" && chrome.storage) ? chrome.storage : browser.storage;
 
+let isTranslationSent = false;
+let isPluginActive = true;
+
+chrome.storage.local.get(['isPluginActive'], (result) => {
+    isPluginActive = result.isPluginActive !== undefined ? result.isPluginActive : true;
+});
+
+chrome.storage.onChanged.addListener((changes) => {
+    if (changes.isPluginActive) {
+        isPluginActive = changes.isPluginActive.newValue;
+    }
+});
+
+chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === 'updatePluginStatus') {
+        isPluginActive = message.isActive;
+    }
+});
+
+
+document.addEventListener('selectionchange', () => {
+    isTranslationSent = false;
+});
+
+
 document.addEventListener('mouseup', async () => {
+    if (!isPluginActive) return;
+
     const selectedText = window.getSelection().toString().trim();
 
     if (selectedText && !isTranslationSent) {
@@ -33,11 +58,9 @@ document.addEventListener('mouseup', async () => {
     }
 });
 
-document.addEventListener('selectionchange', () => {
-    isTranslationSent = false;
-});
-
 function showTranslationPopup(translatedText) {
+    if (!isPluginActive) return;
+
     const popup = document.createElement('div');
     popup.className = 'translation-popup';
     popup.innerHTML = `
