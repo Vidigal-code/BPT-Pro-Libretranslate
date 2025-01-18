@@ -2,6 +2,11 @@
 
 **BPT-Pro** is a project developed to provide a powerful tool for translating text using the best available translation APIs. This project allows users to configure the API URL, set the desired target language, and quickly translate selected text on web pages.
 
+##  Example
+
+![GIF Example](https://github.com/Vidigal-code/BPT-Pro/blob/main/example/example-1.gif?raw=true)
+
+
 ## Features
 
 - **API Configuration**: Configure the API URL and API key for translation services.
@@ -21,14 +26,30 @@
    ```
 
 2. **Load the Extension in Chrome or Edge**:
+
+![Tutorial 1](https://github.com/Vidigal-code/BPT-Pro/blob/main/example/tutorial-3.png?raw=true)
+
+
    - Open your browser and go to the extensions page (chrome://extensions for Chrome or edge://extensions for Edge).
    - Enable Developer Mode (toggle in the top-right corner).
+
+![Tutorial 1](https://github.com/Vidigal-code/BPT-Pro/blob/main/example/tutorial-0.png?raw=true)
+
+     
    - Click on **Load Unpacked** and select the folder where you downloaded or cloned the repository.
+
+![Tutorial 1](https://github.com/Vidigal-code/BPT-Pro/blob/main/example/tutorial-1.png?raw=true)
+
+
+
 
 3. **Configure the Extension**:
    - Click on the extension icon in the browser toolbar.
    - Enter the API URL and the API key for the translation service.
    - Select the target language for translation.
+  
+   ![Tutorial 1](https://github.com/Vidigal-code/BPT-Pro/blob/main/example/example-2.png?raw=true)
+
 
 ### Start Using
 
