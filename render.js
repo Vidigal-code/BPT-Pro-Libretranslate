@@ -60,6 +60,7 @@ function showTranslationPopup(translatedText) {
     const closeButton = popup.querySelector('.close-btn');
     closeButton.style.backgroundColor = '#ff4d4d';
     closeButton.style.color = '#fff';
+    closeButton.style.marginTop = '15px';
     closeButton.style.border = 'none';
     closeButton.style.padding = '8px 15px';
     closeButton.style.borderRadius = '5px';
