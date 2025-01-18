@@ -1,0 +1,100 @@
+# BPT-Pro
+
+**BPT-Pro** is a project developed to provide a powerful tool for translating text using the best available translation APIs. This project allows users to configure the API URL, set the desired target language, and quickly translate selected text on web pages.
+
+## Features
+
+- **API Configuration**: Configure the API URL and API key for translation services.
+- **Multiple Language Support**: Translate text into various languages, such as English, Spanish, French, Portuguese, and more.
+- **Popup Display**: Displays translations in an elegant popup on the screen after selecting text on a webpage.
+- **User-Friendly Interface**: The extension provides a simple interface for users to manage settings and customize their translation experience.
+
+## Installation
+
+### Steps to Install
+
+1. **Download or Clone the Repository**:
+   - You can either download the ZIP file of the repository or clone the repository using Git:
+
+   ```bash
+   git clone https://github.com/Vidigal-code/BPT-Pro.git
+   ```
+
+2. **Load the Extension in Chrome or Edge**:
+   - Open your browser and go to the extensions page (chrome://extensions for Chrome or edge://extensions for Edge).
+   - Enable Developer Mode (toggle in the top-right corner).
+   - Click on **Load Unpacked** and select the folder where you downloaded or cloned the repository.
+
+3. **Configure the Extension**:
+   - Click on the extension icon in the browser toolbar.
+   - Enter the API URL and the API key for the translation service.
+   - Select the target language for translation.
+
+### Start Using
+
+Once configured, simply select text on any webpage, and the translation will appear in a popup.
+
+## Usage
+
+1. **Select Text**: Highlight the text on a webpage.
+2. **Translation Popup**: The translation of the selected text will appear in a popup.
+3. **Close Popup**: Click the "X" button on the popup to close it.
+4. **Configure Settings**: If needed, you can change the API URL, API key, or target language via the settings page.
+
+## Example Code
+
+```javascript
+document.addEventListener('mouseup', async () => {
+    const selectedText = window.getSelection().toString().trim();
+
+    if (selectedText) {
+        chrome.storage.local.get(['targetLanguage', 'apiUrl', 'apiKey'], (result) => {
+            const targetLanguage = result.targetLanguage || 'en';
+            const apiUrl = result.apiUrl || '';
+            const apiKey = result.apiKey || '';
+
+            if (apiUrl && apiKey) {
+                chrome.runtime.sendMessage({
+                    action: 'translate',
+                    text: selectedText,
+                    targetLanguage: targetLanguage,
+                    apiUrl: apiUrl,
+                    apiKey: apiKey
+                }, (response) => {
+                    if (response && response.translatedText) {
+                        alert(`${response.translatedText}`);
+                    }
+                });
+            } else {
+                alert("Please configure the API URL and API Key in the settings.");
+            }
+        });
+    }
+});
+```
+
+## Technologies Used
+
+- **HTML**: Used to create the extension’s settings page and popup.
+- **CSS**: Used to style and create a responsive interface for the extension.
+- **JavaScript**: Handles the logic for translating selected text and manages the interactions between the extension and the browser.
+- **Chrome/Edge Extension APIs**: Allows communication between the browser and the extension, manages storage of settings, and handles the popup behavior.
+
+## License
+
+This project is licensed under the **MIT License**. See the LICENSE file for more details.
+
+## Credits
+
+- **Creator**: Kauan Vidigal
+- **Translation API**: [LibreTranslate](https://libretranslate.com/)
+- **Contributions**: Contributions are welcome! Feel free to fork the repository, open an issue, or submit a pull request for improvements or new features.
+
+## Links
+
+- [LibreTranslate API Documentation](https://libretranslate.com/docs)
+- [LibreTranslate API GitHub](https://github.com/LibreTranslate/LibreTranslate)
+
+---
+
+Feel free to modify and enhance this project to suit your needs!

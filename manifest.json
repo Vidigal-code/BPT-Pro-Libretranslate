@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "BPT-Pro",
+  "description": "An open-source translation plugin for browsers allows real-time translation of web pages. It supports multiple languages \u200B\u200Band can automatically detect and translate text into the user’s preferred language. Being open-source, it is continually improved by the community to stay up-to-date and optimized.",
+  "version": "1.0",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "api.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["render.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon.png"
+  },
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "content_security_policy": {
+    "script-src": "'self'",
+    "object-src": "'self'"
+  }
+}
