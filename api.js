@@ -10,26 +10,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function translateText(text, targetLanguage, apiUrl, apiKey) {
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                q: text,
-                source: 'auto',
-                api_key: apiKey,
-                target: targetLanguage,
-                format: 'text'
-            }),
-        });
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            q: text,
+            source: 'auto',
+            api_key: apiKey,
+            target: targetLanguage,
+            format: 'text'
+        }),
+    });
 
-        const data = await response.json();
-        return data.translatedText;
-    } catch (error) {
-        console.error('Translation error:', error);
-        return 'Translation error';
+    const data = await response.json();
+
+    if (data.error) {
+        console.error('Translation API error:', data.error);
+        return `Error: ${data.error}`;
     }
+
+    return data.translatedText;
 }

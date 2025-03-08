@@ -1,4 +1,4 @@
-# BPT-Pro
+# BPT-Pro-Libretranslate
 
 **BPT-Pro** is a project developed to provide a powerful text translation tool, using the best available translation APIs. This project allows users to configure the API URL, set the desired target language, and quickly translate selected text on web pages.
 
@@ -54,39 +54,38 @@ Once configured, simply select text on any webpage, and the translation will app
 
 1. **Select Text**: Highlight the text on a webpage.
 2. **Translation Popup**: The translation of the selected text will appear in a popup.
-3. **Close Popup**: Click the "Close" button on the popup to close it.
+3. **Close Popup**: Click the "X" button on the popup to close it.
 4. **Configure Settings**: If needed, you can change the API URL, API key, or target language via the settings page.
+5. **Plugin Status**: Activate the plugin.
 
 ## Example Code
 
 ```javascript
-document.addEventListener('mouseup', async () => {
-    const selectedText = window.getSelection().toString().trim();
+async function translateText(text, targetLanguage, apiUrl, apiKey) {
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            q: text,
+            source: 'auto',
+            api_key: apiKey,
+            target: targetLanguage,
+            format: 'text'
+        }),
+    });
 
-    if (selectedText) {
-        chrome.storage.local.get(['targetLanguage', 'apiUrl', 'apiKey'], (result) => {
-            const targetLanguage = result.targetLanguage || 'en';
-            const apiUrl = result.apiUrl || '';
-            const apiKey = result.apiKey || '';
+    const data = await response.json();
 
-            if (apiUrl && apiKey) {
-                chrome.runtime.sendMessage({
-                    action: 'translate',
-                    text: selectedText,
-                    targetLanguage: targetLanguage,
-                    apiUrl: apiUrl,
-                    apiKey: apiKey
-                }, (response) => {
-                    if (response && response.translatedText) {
-                        alert(`${response.translatedText}`);
-                    }
-                });
-            } else {
-                alert("Please configure the API URL and API Key in the settings.");
-            }
-        });
+    if (data.error) {
+        console.error('Translation API error:', data.error);
+        return `Error: ${data.error}`;
     }
-});
+
+    return data.translatedText;
+}
 ```
 
 ## Technologies Used
