@@ -95,9 +95,13 @@ async function translateText(text, targetLanguage, apiUrl, apiKey) {
 - **JavaScript**: Handles the logic for translating selected text and manages the interactions between the extension and the browser.
 - **Chrome/Edge Extension APIs**: Allows communication between the browser and the extension, manages storage of settings, and handles the popup behavior.
 
-## License
+# License  
 
-This project is licensed under the **MIT License**. See the LICENSE file for more details.
+This project is licensed under the **MIT License**.  
+
+See the [LICENSE](https://github.com/Vidigal-code/BPT-Pro-Libretranslate/blob/main/License.mit) file for more details.  
+
+---
 
 ## Credits
 
