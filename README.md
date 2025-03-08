@@ -1,6 +1,6 @@
 # BPT-Pro-Libretranslate
 
-**BPT-Pro** is a project developed to provide a powerful text translation tool, using the best available translation APIs. This project allows users to configure the API URL, set the desired target language, and quickly translate selected text on web pages.
+**BPT-Pro-Libretranslate** is a project developed to provide a powerful text translation tool, using the best available translation APIs. This project allows users to configure the API URL, set the desired target language, and quickly translate selected text on web pages.
 
 ## Example
 
