@@ -21,7 +21,7 @@
    - You can either download the ZIP file of the repository or clone the repository using Git:
 
    ```bash
-   git clone https://github.com/Vidigal-code/BPT-Pro.git
+   git clone https://github.com/Vidigal-code/BPT-Pro-Libretranslate.git
    ```
 
 2. **Load the Extension in Chrome or Edge**:
