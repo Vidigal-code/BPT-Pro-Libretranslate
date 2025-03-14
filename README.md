@@ -103,9 +103,9 @@ See the [LICENSE](https://github.com/Vidigal-code/BPT-Pro-Libretranslate/blob/ma
 
 # License - API
 
-This project is licensed under the **MIT License**.
+This project is licensed api under the **MIT License**.
 
-See the [API - LICENSE](https://github.com/LibreTranslate/LibreTranslate/blob/main/LICENSE) file for more details.
+See the [LICENSE](https://github.com/LibreTranslate/LibreTranslate/blob/main/LICENSE) file for more details.
 
 ---
 
