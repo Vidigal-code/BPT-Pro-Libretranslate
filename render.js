@@ -968,5 +968,3 @@ class ApiTestPopup {
 }
 
 
-// Instantiate the TranslationManager when the script is loaded.
-new TranslationManager();
