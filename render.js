@@ -729,6 +729,8 @@ class ApiTestPopup {
                     resultDiv.textContent = '⏳ Testing connection...';
                     apiCard.appendChild(resultDiv);
 
+                    let success = false;
+                    let message = '';
                     try {
                         const response = await chrome.runtime.sendMessage({
                             action: 'testConnection',
@@ -739,13 +741,31 @@ class ApiTestPopup {
                         if (response.success) {
                             resultDiv.style.backgroundColor = '#1e462a';
                             resultDiv.textContent = `✅ Success: ${api.url}`;
+                            success = true;
+                            message = `Success: ${api.url}`;
                         } else {
                             resultDiv.style.backgroundColor = '#4e2828';
                             resultDiv.textContent = `❌ Error: ${response.message}`;
+                            message = `Error: ${response.message}`;
                         }
                     } catch (error) {
                         resultDiv.style.backgroundColor = '#4e2828';
                         resultDiv.textContent = `❌ Error: ${error.message || 'Unknown error'}`;
+                        message = `Error: ${error.message || 'Unknown error'}`;
+                    }
+
+                    // Record the test in history
+                    this.testHistory.unshift({
+                        url: api.url,
+                        message,
+                        success,
+                        timestamp: Date.now(),
+                    });
+                    this.saveToCache();
+
+                    // If the history tab is currently visible, refresh it
+                    if (historyContent.style.display !== 'none') {
+                        this.updateHistoryView(historyContent);
                     }
                 };
 
