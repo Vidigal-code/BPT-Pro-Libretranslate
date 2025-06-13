@@ -219,19 +219,15 @@ class TranslationManager {
 
         // Event listener for language selector change
         const languageSelector = popup.querySelector('.language-selector');
-
-        languageSelector.addEventListener('change', (e) => {
-            (async () => {
-                try {
-                    const newText = await this.retranslateText(popup, e.target.value);
-                    popup.querySelector('p').textContent = newText;
-                    this.resetPopupTimeout(popup);
-                } catch (error) {
-                    popup.querySelector('p').textContent = 'Translation error: ' + error.message;
-                }
-            })();
+        languageSelector.addEventListener('change', async (e) => {
+            try {
+                const newText = await this.retranslateText(popup, e.target.value); // Retranslate with selected language
+                popup.querySelector('p').textContent = newText;
+                this.resetPopupTimeout(popup); // Reset popup timeout
+            } catch (error) {
+                popup.querySelector('p').textContent = 'Translation error: ' + error.message;
+            }
         });
-
 
         // Event listener for closing the popup
         const closeButton = popup.querySelector('.close-btn');
@@ -968,3 +964,5 @@ class ApiTestPopup {
 }
 
 
+// Instantiate the TranslationManager when the script is loaded.
+new TranslationManager();
