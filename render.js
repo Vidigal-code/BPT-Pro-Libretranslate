@@ -2,29 +2,37 @@
  * TranslationManager class handles the translation process, including activating/deactivating the plugin,
  * sending translation requests, handling text selections, showing translation popups, and managing settings.
  */
-/**
- * Manages the translation process for the BPT-Pro-Libretranslate Chrome extension.
- * Handles plugin activation, text selection, translation requests, popups, and settings.
- */
+
 /**
  * Manages the translation process for the BPT-Pro-Libretranslate Chrome extension.
  * Handles plugin activation, text selection, translation requests, popups, and settings.
  */
 class TranslationManager {
+    /**
+     * Initializes the TranslationManager with default state and properties.
+     */
     constructor() {
+        /**
+         * State object containing configuration and status of the plugin.
+         * @type {Object}
+         */
         this.state = {
-            apiUrl: '',
-            apiKey: '',
-            isTranslationSent: false,
-            isPluginActive: false,
-            currentTargetLanguage: 'en',
+            apiUrl: '', // URL for the translation API
+            apiKey: '', // API key for authentication
+            isTranslationSent: false, // Tracks if a translation request is sent
+            isPluginActive: false, // Indicates if the plugin is active
+            currentTargetLanguage: 'en', // Default target language for translation
             shortcuts: {
-                activate: 'A',
-                deactivate: 'K',
-                testConnection: 'T',
-                toggle: 'G',
+                activate: 'A', // Shortcut key to activate plugin
+                deactivate: 'K', // Shortcut key to deactivate plugin
+                testConnection: 'T', // Shortcut key to test API connection
+                toggle: 'G', // Shortcut key to toggle plugin status
             }
         };
+        /**
+         * Available languages for translation with their codes and names.
+         * @type {Object}
+         */
         this.availableLanguages = {
             en: 'English',
             es: 'Spanish',
@@ -37,20 +45,26 @@ class TranslationManager {
             zh: 'Chinese',
             ar: 'Arabic'
         };
-        this.rateLimitPopup = null;
-        this.rateLimitMessageDiv = null;
-        this.rateLimitInfoDiv = null;
-        this.rateLimitCloseBtn = null;
-        this.rateLimitTimeout = null;
-        this.init();
+        this.rateLimitPopup = null; // Reference to rate limit popup element
+        this.rateLimitMessageDiv = null; // Reference to rate limit message div
+        this.rateLimitInfoDiv = null; // Reference to rate limit info div
+        this.rateLimitCloseBtn = null; // Reference to rate limit close button
+        this.rateLimitTimeout = null; // Timeout for rate limit popup
+        this.init(); // Initialize the manager
     }
 
+    /**
+     * Sets up the initial state by loading configurations and setting up listeners.
+     */
     init() {
         this.loadState();
         this.setupListeners();
         this.setupKeyboardShortcuts();
     }
 
+    /**
+     * Loads saved state from chrome.storage.local.
+     */
     loadState() {
         chrome.storage.local.get(['isPluginActive', 'targetLanguage', 'shortcuts'], (result) => {
             this.state.isPluginActive = result.isPluginActive || false;
@@ -65,9 +79,12 @@ class TranslationManager {
         });
     }
 
+    /**
+     * Sets up event listeners for text selection, storage changes, and messages.
+     */
     setupListeners() {
         document.addEventListener('selectionchange', () => {
-            this.state.isTranslationSent = false;
+            this.state.isTranslationSent = false; // Reset translation sent status
         });
         document.addEventListener('mouseup', () => this.handleTextSelection());
         chrome.storage.onChanged.addListener((changes) => this.handleStorageChanges(changes));
@@ -76,6 +93,10 @@ class TranslationManager {
         });
     }
 
+    /**
+     * Handles changes in chrome.storage.local.
+     * @param {Object} changes - Object containing changed storage keys and values.
+     */
     handleStorageChanges(changes) {
         if (changes.isPluginActive) {
             this.state.isPluginActive = changes.isPluginActive.newValue;
@@ -88,6 +109,10 @@ class TranslationManager {
         }
     }
 
+    /**
+     * Processes incoming messages from chrome.runtime.
+     * @param {Object} message - The message object containing action and data.
+     */
     handleMessages(message) {
         if (message.action === 'updatePluginStatus') {
             this.state.isPluginActive = message.isActive;
@@ -98,6 +123,9 @@ class TranslationManager {
         }
     }
 
+    /**
+     * Sets up keyboard shortcuts for plugin actions.
+     */
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (event) => {
             if (event.altKey) {
@@ -121,6 +149,9 @@ class TranslationManager {
         });
     }
 
+    /**
+     * Handles text selection for translation when the plugin is active.
+     */
     async handleTextSelection() {
         if (!this.state.isPluginActive) return;
         const selectedText = window.getSelection().toString().trim();
@@ -137,6 +168,10 @@ class TranslationManager {
         }
     }
 
+    /**
+     * Retrieves configuration from chrome.storage.local.
+     * @returns {Promise<Object>} Configuration object.
+     */
     async getConfiguration() {
         return new Promise((resolve, reject) => {
             try {
@@ -162,6 +197,11 @@ class TranslationManager {
         });
     }
 
+    /**
+     * Sends a translation request to the background script.
+     * @param {string} text - Text to translate.
+     * @param {Object} config - Configuration object.
+     */
     async sendTranslationRequest(text, config) {
         try {
             const response = await new Promise((resolve, reject) => {
@@ -190,6 +230,11 @@ class TranslationManager {
         }
     }
 
+    /**
+     * Displays a popup with the translated text.
+     * @param {string} translatedText - Translated text to display.
+     * @param {string} originalText - Original selected text.
+     */
     showTranslationPopup(translatedText, originalText) {
         const popup = this.createPopup(translatedText, originalText);
         this.applyPopupStyles(popup);
@@ -209,6 +254,12 @@ class TranslationManager {
         this.setPopupTimeout(popup);
     }
 
+    /**
+     * Creates a translation popup element.
+     * @param {string} translatedText - Translated text to display.
+     * @param {string} originalText - Original selected text.
+     * @returns {HTMLElement} Popup element.
+     */
     createPopup(translatedText, originalText) {
         const popup = document.createElement('div');
         popup.className = 'translation-popup';
@@ -300,6 +351,12 @@ class TranslationManager {
         this.enableDragging(popup, closeButton);
     }
 
+    /**
+     * Retranslates the original text to a new language.
+     * @param {HTMLElement} popup - The popup containing the original text.
+     * @param {string} newLanguage - The new target language code.
+     * @returns {Promise<string>} The translated text.
+     */
     async retranslateText(popup, newLanguage) {
         const originalText = popup.dataset.originalText;
         const config = await this.getConfiguration();
@@ -332,6 +389,10 @@ class TranslationManager {
         }
     }
 
+    /**
+     * Sets a timeout to remove the popup after 15 seconds.
+     * @param {HTMLElement} popup - The popup element.
+     */
     setPopupTimeout(popup) {
         popup.timeoutId = setTimeout(() => {
             if (document.body.contains(popup)) {
@@ -340,11 +401,19 @@ class TranslationManager {
         }, 15000);
     }
 
+    /**
+     * Resets the popup timeout.
+     * @param {HTMLElement} popup - The popup element.
+     */
     resetPopupTimeout(popup) {
         clearTimeout(popup.timeoutId);
         this.setPopupTimeout(popup);
     }
 
+    /**
+     * Handles errors by displaying appropriate popups.
+     * @param {Error} error - The error object.
+     */
     handleError(error) {
         if (error.message.includes('Extension context invalidated') || error.message.includes('Could not establish connection')) {
             this.createErrorPopup("The extension has been updated or reloaded. Please refresh the page to continue using it.");
@@ -353,6 +422,10 @@ class TranslationManager {
         }
     }
 
+    /**
+     * Toggles the plugin's active status.
+     * @param {boolean|null} forceState - Optional state to force (true/false), null to toggle.
+     */
     togglePluginStatus(forceState = null) {
         this.state.isPluginActive = forceState !== null ? forceState : !this.state.isPluginActive;
         chrome.storage.local.set({ isPluginActive: this.state.isPluginActive }, () => {
@@ -364,6 +437,12 @@ class TranslationManager {
         });
     }
 
+    /**
+     * Creates a banner notification.
+     * @param {string} message - The message to display.
+     * @param {string} [backgroundColor='#ff0000'] - Background color of the banner.
+     * @param {string} [textColor='white'] - Text color of the banner.
+     */
     createBanner(message, backgroundColor = '#ff0000', textColor = 'white') {
         const banner = document.createElement('div');
         banner.className = 'dynamic-banner';
@@ -413,14 +492,25 @@ class TranslationManager {
         }, 5000);
     }
 
+    /**
+     * Creates a success notification banner.
+     * @param {string} message - The success message to display.
+     */
     createSuccessPopup(message) {
         this.createBanner(message, '#28a745', 'white');
     }
 
+    /**
+     * Creates an error notification banner.
+     * @param {string} message - The error message to display.
+     */
     createErrorPopup(message) {
         this.createBanner(message, '#ff0000', 'white');
     }
 
+    /**
+     * Creates a rate limit popup if it doesn't exist.
+     */
     createRateLimitPopup() {
         if (this.rateLimitPopup) return;
         this.rateLimitPopup = document.createElement('div');
@@ -483,6 +573,11 @@ class TranslationManager {
         this.enableDragging(this.rateLimitPopup, this.rateLimitCloseBtn);
     }
 
+    /**
+     * Shows the rate limit popup with a message.
+     * @param {string} message - The message to display.
+     * @param {string} type - The type of message ('error' or other).
+     */
     showRateLimitPopup(message, type) {
         this.createRateLimitPopup();
         this.rateLimitMessageDiv.textContent = message;
@@ -491,6 +586,9 @@ class TranslationManager {
         this.rateLimitInfoDiv.textContent = '';
     }
 
+    /**
+     * Hides the rate limit popup and clears its content.
+     */
     hideRateLimitPopup() {
         if (this.rateLimitPopup) {
             this.rateLimitPopup.style.display = 'none';
@@ -503,6 +601,11 @@ class TranslationManager {
         }
     }
 
+    /**
+     * Updates the rate limit information in the popup.
+     * @param {number} remainingRequests - Number of remaining API requests.
+     * @param {number|null} waitTime - Time to wait before more requests are available.
+     */
     updateRateLimitInfo(remainingRequests, waitTime) {
         if (!this.rateLimitPopup || this.rateLimitPopup.style.display !== 'block') return;
         if (waitTime !== null) {
@@ -566,25 +669,29 @@ class TranslationManager {
         });
     }
 }
-/**
- * Manages the API test popup interface for the BPT-Pro-Libretranslate Chrome extension.
- * Provides functionality to add, test, and remove API configurations, and view test history.
- */
+
+
 /**
  * Manages the API test popup interface for the BPT-Pro-Libretranslate Chrome extension.
  * Provides functionality to add, test, and remove API configurations, and view test history.
  */
 class ApiTestPopup {
+    /**
+     * Initializes the ApiTestPopup with empty API list and test history.
+     */
     constructor() {
-        this.apiList = [];
-        this.testHistory = [];
-        this.loadFromCache();
+        this.apiList = []; // List of API configurations
+        this.testHistory = []; // History of API test results
+        this.loadFromCache(); // Load saved data from localStorage
     }
 
     /**
      * Creates and displays the API test popup with tabs for API list and test history, enabling dragging.
      */
     createApiTestListPopup() {
+        /**
+         * Create the main popup container
+         */
         const popupContainer = document.createElement('div');
         Object.assign(popupContainer.style, {
             position: 'fixed',
@@ -606,6 +713,10 @@ class ApiTestPopup {
             gap: '15px',
             cursor: 'move'
         });
+
+        /**
+         * Create and style the popup title
+         */
         const title = document.createElement('h2');
         title.textContent = 'API Test Manager LibreTranslate';
         Object.assign(title.style, {
@@ -615,6 +726,10 @@ class ApiTestPopup {
             fontSize: '24px',
             fontWeight: 'bold'
         });
+
+        /**
+         * Create and style the close button
+         */
         const closeButton = document.createElement('button');
         closeButton.textContent = '✕';
         Object.assign(closeButton.style, {
@@ -639,12 +754,23 @@ class ApiTestPopup {
             closeButton.style.color = '#aaa';
         };
         closeButton.onclick = () => document.body.removeChild(popupContainer);
+
+        /**
+         * Create tabs container for switching between API list and history
+         */
         const tabsContainer = document.createElement('div');
         Object.assign(tabsContainer.style, {
             display: 'flex',
             borderBottom: '1px solid #444',
             marginBottom: '15px'
         });
+
+        /**
+         * Helper function to create a tab
+         * @param {string} name - Tab name
+         * @param {boolean} isActive - Whether the tab is active by default
+         * @returns {HTMLElement} Tab element
+         */
         const createTab = (name, isActive = false) => {
             const tab = document.createElement('div');
             tab.textContent = name;
@@ -657,11 +783,16 @@ class ApiTestPopup {
             });
             return tab;
         };
+
         const apiListTab = createTab('API List', true);
         const historyTab = createTab('Test History');
         const apiListContent = document.createElement('div');
         const historyContent = document.createElement('div');
         historyContent.style.display = 'none';
+
+        /**
+         * Handle API List tab click
+         */
         apiListTab.onclick = () => {
             apiListTab.style.borderBottom = '2px solid #4c9aff';
             apiListTab.style.color = '#4c9aff';
@@ -670,6 +801,10 @@ class ApiTestPopup {
             apiListContent.style.display = 'block';
             historyContent.style.display = 'none';
         };
+
+        /**
+         * Handle Test History tab click
+         */
         historyTab.onclick = () => {
             historyTab.style.borderBottom = '2px solid #4c9aff';
             historyTab.style.color = '#4c9aff';
@@ -679,8 +814,13 @@ class ApiTestPopup {
             apiListContent.style.display = 'none';
             this.updateHistoryView(historyContent);
         };
+
         tabsContainer.appendChild(apiListTab);
         tabsContainer.appendChild(historyTab);
+
+        /**
+         * Create form for adding new APIs
+         */
         const formContainer = document.createElement('div');
         Object.assign(formContainer.style, {
             display: 'flex',
@@ -691,6 +831,7 @@ class ApiTestPopup {
             borderRadius: '8px',
             marginBottom: '15px'
         });
+
         const formTitle = document.createElement('h3');
         formTitle.textContent = 'Add New API';
         Object.assign(formTitle.style, {
@@ -699,8 +840,10 @@ class ApiTestPopup {
             fontWeight: 'normal',
             color: '#eee'
         });
+
         const apiUrlInput = this.createStyledInput('API URL', 'https://translate.fedilab.app/translate');
         const apiKeyInput = this.createStyledInput('API Key', 'your-api-key-here');
+
         const addButton = document.createElement('button');
         addButton.textContent = 'Add API';
         Object.assign(addButton.style, {
@@ -731,16 +874,23 @@ class ApiTestPopup {
                 this.updateApiList(apiListElement);
             }
         };
+
         formContainer.appendChild(formTitle);
         formContainer.appendChild(apiUrlInput);
         formContainer.appendChild(apiKeyInput);
         formContainer.appendChild(addButton);
+
         const apiListElement = document.createElement('div');
         Object.assign(apiListElement.style, {
             display: 'flex',
             flexDirection: 'column',
             gap: '10px'
         });
+
+        /**
+         * Updates the API list display
+         * @param {HTMLElement} listElement - The element to update with API cards
+         */
         this.updateApiList = (listElement) => {
             listElement.innerHTML = '';
             if (this.apiList.length === 0) {
@@ -849,6 +999,11 @@ class ApiTestPopup {
                 listElement.appendChild(apiCard);
             });
         };
+
+        /**
+         * Updates the test history display
+         * @param {HTMLElement} historyContainer - The element to update with history entries
+         */
         this.updateHistoryView = (historyContainer) => {
             historyContainer.innerHTML = '';
             if (this.testHistory.length === 0) {
@@ -904,6 +1059,7 @@ class ApiTestPopup {
             });
             historyContainer.appendChild(historyList);
         };
+
         apiListContent.appendChild(formContainer);
         apiListContent.appendChild(apiListElement);
         popupContainer.appendChild(closeButton);
@@ -917,6 +1073,12 @@ class ApiTestPopup {
         this.enableDragging(popupContainer, closeButton);
     }
 
+    /**
+     * Creates a styled input field with a label
+     * @param {string} label - The label for the input
+     * @param {string} placeholder - The placeholder text
+     * @returns {HTMLElement} Input element
+     */
     createStyledInput(label, placeholder) {
         const container = document.createElement('div');
         Object.assign(container.style, {
@@ -948,6 +1110,12 @@ class ApiTestPopup {
         return input;
     }
 
+    /**
+     * Creates a styled action button
+     * @param {string} text - Button text
+     * @param {string} color - Background color
+     * @returns {HTMLElement} Button element
+     */
     createActionButton(text, color) {
         const button = document.createElement('button');
         button.textContent = text;
@@ -972,11 +1140,19 @@ class ApiTestPopup {
         return button;
     }
 
+    /**
+     * Masks the API key for display
+     * @param {string} key - The API key to mask
+     * @returns {string} Masked API key
+     */
     maskApiKey(key) {
         if (!key || key.length < 8) return key;
         return key.substring(0, 4) + '•'.repeat(Math.min(key.length - 8, 10)) + key.substring(key.length - 4);
     }
 
+    /**
+     * Loads API list and test history from localStorage
+     */
     loadFromCache() {
         try {
             const cachedApis = localStorage.getItem('apiTestList');
@@ -993,6 +1169,9 @@ class ApiTestPopup {
         }
     }
 
+    /**
+     * Saves API list and test history to localStorage
+     */
     saveToCache() {
         try {
             localStorage.setItem('apiTestList', JSON.stringify(this.apiList));
