@@ -1,29 +1,22 @@
 /**
- * TranslationManager class handles the translation process, including activating/deactivating the plugin,
- * sending translation requests, handling text selections, showing translation popups, and managing settings.
+ * TranslationManager class handles the translation process and plugin functionality.
  */
 class TranslationManager {
-
     constructor() {
-        /**
-         * Initializes the state object with default values for the plugin status, target language, and shortcuts.
-         */
         this.state = {
-            apiUrl: '', // ApiUrl (set to a default if needed)
-            apiKey: '', // ApiKey (set to a default if needed)
-            isTranslationSent: false,  // Tracks if a translation has been sent
-            isPluginActive: false, // Tracks if the plugin is active
-            currentTargetLanguage: 'en', // Default target language is English
+            apiUrl: '',
+            apiKey: '',
+            isTranslationSent: false,
+            isPluginActive: false,
+            currentTargetLanguage: 'en',
             shortcuts: {
-                activate: 'A', // Shortcut key to activate the plugin
-                deactivate: 'K', // Shortcut key to deactivate the plugin
-                testConnection: 'T', // Shortcut key to test the connection
-                toggle: 'G', // Shortcut key to toggle plugin activation
+                activate: 'A',
+                deactivate: 'K',
+                testConnection: 'T',
+                toggle: 'G'
             }
         };
-        /**
-         * A list of available languages with their respective language codes.
-         */
+
         this.availableLanguages = {
             en: 'English',
             es: 'Spanish',
@@ -36,78 +29,65 @@ class TranslationManager {
             zh: 'Chinese',
             ar: 'Arabic'
         };
-        /**
-         * Initializes the TranslationManager instance by loading state, setting up event listeners, and keyboard shortcuts.
-         */
+
+        // Debounce function to limit rapid requests
+        this.debounce = (func, wait) => {
+            let timeout;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        };
+
+        this.handleTextSelection = this.debounce(this.handleTextSelectionInternal, 500);
+
         this.init();
     }
 
-
-    /**
-     * Loads the current plugin state from local storage and sets up event listeners and keyboard shortcuts.
-     */
     init() {
         this.loadState();
         this.setupListeners();
         this.setupKeyboardShortcuts();
     }
 
-    /**
-     * Loads the plugin state (e.g., whether it's active and the target language) from local storage.
-     */
     loadState() {
-        chrome.storage.local.get(['isPluginActive', 'targetLanguage', 'shortcuts'], (result) => {
-            this.state.isPluginActive = result.isPluginActive || false;
-            this.state.currentTargetLanguage = result.targetLanguage || 'en';
-            if (result.shortcuts) {
-                this.state.shortcuts = {...this.state.shortcuts, ...result.shortcuts};
-            }
-            document.getElementById('shortcutToggle').value = this.state.shortcuts.toggle;
+        chrome.storage.local.get(['isPluginActive', 'targetLanguage', 'apiUrl', 'apiKey', 'shortcuts'], result => {
+            this.state = {
+                ...this.state,
+                isPluginActive: !!result.isPluginActive,
+                currentTargetLanguage: result.targetLanguage || 'en',
+                apiUrl: result.apiUrl || '',
+                apiKey: result.apiKey || '',
+                shortcuts: { ...this.state.shortcuts, ...result.shortcuts }
+            };
         });
     }
 
-    /**
-     * Sets up event listeners for selection changes, mouse-up events, and storage updates.
-     */
     setupListeners() {
         document.addEventListener('selectionchange', () => {
-            this.state.isTranslationSent = false; // Reset translation flag when selection changes
+            this.state.isTranslationSent = false;
         });
         document.addEventListener('mouseup', () => this.handleTextSelection());
-        chrome.storage.onChanged.addListener((changes) => this.handleStorageChanges(changes));
-        chrome.runtime.onMessage.addListener((message) => this.handleMessages(message));
+        chrome.storage.onChanged.addListener(changes => this.handleStorageChanges(changes));
+        chrome.runtime.onMessage.addListener(message => this.handleMessages(message));
     }
 
-
-    /**
-     * Handles changes in the local storage (e.g., updates to plugin status, target language, or shortcuts).
-     */
     handleStorageChanges(changes) {
-        if (changes.isPluginActive) {
-            this.state.isPluginActive = changes.isPluginActive.newValue;
-        }
-        if (changes.targetLanguage) {
-            this.state.currentTargetLanguage = changes.targetLanguage.newValue;
-        }
-        if (changes.shortcuts) {
-            this.state.shortcuts = {...this.state.shortcuts, ...changes.shortcuts.newValue};
-        }
+        if (changes.isPluginActive) this.state.isPluginActive = changes.isPluginActive.newValue;
+        if (changes.targetLanguage) this.state.currentTargetLanguage = changes.targetLanguage.newValue;
+        if (changes.apiUrl) this.state.apiUrl = changes.apiUrl.newValue;
+        if (changes.apiKey) this.state.apiKey = changes.apiKey.newValue;
+        if (changes.shortcuts) this.state.shortcuts = { ...this.state.shortcuts, ...changes.shortcuts.newValue };
     }
 
-    /**
-     * Handles messages received from other parts of the extension, such as plugin status updates.
-     */
     handleMessages(message) {
         if (message.action === 'updatePluginStatus') {
             this.state.isPluginActive = message.isActive;
         }
     }
 
-    /**
-     * Sets up keyboard shortcuts to activate/deactivate the plugin, test connection, and toggle the plugin status.
-     */
     setupKeyboardShortcuts() {
-        document.addEventListener('keydown', (event) => {
+        document.addEventListener('keydown', event => {
             if (event.altKey) {
                 switch (event.key.toUpperCase()) {
                     case this.state.shortcuts.activate:
@@ -118,130 +98,98 @@ class TranslationManager {
                         break;
                     case this.state.shortcuts.testConnection:
                         event.preventDefault();
-                        const apiTestPopup = new ApiTestPopup();
-                        apiTestPopup.createApiTestListPopup();
+                        new ApiTestPopup().createApiTestListPopup();
                         break;
                     case this.state.shortcuts.toggle:
                         this.togglePluginStatus();
-                        break;
-                    default:
                         break;
                 }
             }
         });
     }
 
-    /**
-     * Handles text selection and sends a translation request if text is selected and the plugin is active.
-     */
-    async handleTextSelection() {
-        if (!this.state.isPluginActive) return;  // Ensure the plugin is active
+    async handleTextSelectionInternal() {
+        if (!this.state.isPluginActive) return;
 
-
-        const selectedText = window.getSelection().toString().trim();  // Get the selected text
-        if (!selectedText || this.state.isTranslationSent) return;  // No text selected or translation already sent
-
+        const selectedText = window.getSelection().toString().trim();
+        if (!selectedText || this.state.isTranslationSent) return;
 
         try {
             const config = await this.getConfiguration();
             if (!config.apiUrl || !config.apiKey) {
-                alert("Please configure the API URL and API Key in the settings.");
+                this.createErrorPopup('Please configure the API URL and API Key in the settings.');
                 return;
             }
 
-            // Send translation request
             this.sendTranslationRequest(selectedText, config);
         } catch (error) {
             this.handleError(error);
         }
     }
 
-    /**
-     * Retrieves the configuration settings (target language, API URL, and API key) from local storage.
-     */
     async getConfiguration() {
         return new Promise((resolve, reject) => {
-            try {
-                chrome.storage.local.get(
-                    ['targetLanguage', 'apiUrl', 'apiKey', 'isPluginActive', 'shortcuts'],
-                    (result) => {
-                        if (chrome.runtime.lastError) {
-                            reject(new Error("Error accessing storage: " + chrome.runtime.lastError.message));
-                        } else {
-                            resolve({
-                                targetLanguage: this.state?.currentTargetLanguage || result.targetLanguage || 'en',
-                                apiUrl: result.apiUrl || '',
-                                apiKey: result.apiKey || '',
-                                isPluginActive: result.isPluginActive,
-                                shortcuts: result.shortcuts,
-                            });
-                        }
-                    }
-                );
-            } catch (error) {
-                console.error("Unexpected error:", error);
-                reject(new Error("Extension context invalidated or unexpected error occurred."));
-            }
+            chrome.storage.local.get(['targetLanguage', 'apiUrl', 'apiKey', 'isPluginActive', 'shortcuts'], result => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(`Storage error: ${chrome.runtime.lastError.message}`));
+                } else {
+                    resolve({
+                        targetLanguage: this.state.currentTargetLanguage || result.targetLanguage || 'en',
+                        apiUrl: result.apiUrl || '',
+                        apiKey: result.apiKey || '',
+                        isPluginActive: result.isPluginActive,
+                        shortcuts: result.shortcuts
+                    });
+                }
+            });
         });
     }
 
-
-    /**
-     * Sends the translation request to the extension background script and handles the response.
-     */
     async sendTranslationRequest(text, config) {
+        this.state.isTranslationSent = true;
         try {
             const response = await chrome.runtime.sendMessage({
                 action: 'translate',
-                text: text,
+                text,
                 targetLanguage: config.targetLanguage,
                 apiUrl: config.apiUrl,
-                apiKey: config.apiKey,
+                apiKey: config.apiKey
             });
 
-            if (response && response.translatedText) {
+            if (response.translatedText) {
                 this.showTranslationPopup(response.translatedText, text);
-                this.state.isTranslationSent = true;
             } else {
-                throw new Error(response?.error?.message || 'Unknown translation error');
+                throw new Error(response.error?.message || 'Translation failed');
             }
         } catch (error) {
             this.handleError(error);
+            this.state.isTranslationSent = false;
         }
     }
 
-    /**
-     * Displays a popup with the translated text and allows the user to select a new language for retranslation.
-     */
     showTranslationPopup(translatedText, originalText) {
-        const popup = this.createPopup(translatedText, originalText); // Create the translation popup
-        this.applyPopupStyles(popup);  // Apply styles to the popup
+        const popup = this.createPopup(translatedText, originalText);
+        this.applyPopupStyles(popup);
 
-        // Event listener for language selector change
         const languageSelector = popup.querySelector('.language-selector');
-        languageSelector.addEventListener('change', async (e) => {
+        languageSelector.addEventListener('change', async e => {
             try {
-                const newText = await this.retranslateText(popup, e.target.value); // Retranslate with selected language
+                const newText = await this.retranslateText(popup, e.target.value);
                 popup.querySelector('p').textContent = newText;
-                this.resetPopupTimeout(popup); // Reset popup timeout
+                this.resetPopupTimeout(popup);
             } catch (error) {
-                popup.querySelector('p').textContent = 'Translation error: ' + error.message;
+                popup.querySelector('p').textContent = `Translation error: ${error.message}`;
+                this.createErrorPopup(error.message);
             }
         });
 
-        // Event listener for closing the popup
         const closeButton = popup.querySelector('.close-btn');
         closeButton.addEventListener('click', () => popup.remove());
 
         document.body.appendChild(popup);
-        this.setPopupTimeout(popup);  // Set a timeout to auto-close the popup
-
-
+        this.setPopupTimeout(popup);
     }
 
-    /**
-     * Creates the HTML structure for the translation popup, including the translated text and language selector.
-     */
     createPopup(translatedText, originalText) {
         const popup = document.createElement('div');
         popup.className = 'translation-popup';
@@ -251,11 +199,10 @@ class TranslationManager {
                 <div class="popup-header">
                     <select class="language-selector">
                         ${Object.entries(this.availableLanguages)
-            .map(([code, name]) =>
-                `<option value="${code}" ${code === this.state.currentTargetLanguage ? 'selected' : ''}>${name}</option>`)
+            .map(([code, name]) => `<option value="${code}" ${code === this.state.currentTargetLanguage ? 'selected' : ''}>${name}</option>`)
             .join('')}
                     </select>
-                    <button class="close-btn">&times;</button>
+                    <button class="close-btn">×</button>
                 </div>
                 <p>${translatedText}</p>
             </div>
@@ -263,12 +210,7 @@ class TranslationManager {
         return popup;
     }
 
-
-    /**
-     * Applies CSS styles to the translation popup.
-     */
     applyPopupStyles(popup) {
-
         popup.style.position = 'fixed';
         popup.style.left = '50%';
         popup.style.top = '50%';
@@ -317,7 +259,6 @@ class TranslationManager {
         closeButton.addEventListener('mouseover', () => {
             closeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
         });
-
         closeButton.addEventListener('mouseout', () => {
             closeButton.style.backgroundColor = 'transparent';
         });
@@ -327,93 +268,66 @@ class TranslationManager {
         paragraph.style.fontSize = '16px';
         paragraph.style.lineHeight = '1.5';
         paragraph.style.wordBreak = 'break-word';
-
     }
 
-
-    /**
-     * Retranslates the original text with a new target language.
-     */
     async retranslateText(popup, newLanguage) {
         const originalText = popup.dataset.originalText;
         const config = await this.getConfiguration();
         config.targetLanguage = newLanguage;
 
         this.state.currentTargetLanguage = newLanguage;
-        chrome.storage.local.set({targetLanguage: newLanguage}, () => {
-            if (chrome.runtime.lastError) {
-                throw new Error("Error saving language preference: " + chrome.runtime.lastError.message);
-            }
-        });
+        chrome.storage.local.set({ targetLanguage: newLanguage });
 
         const response = await chrome.runtime.sendMessage({
             action: 'translate',
             text: originalText,
             targetLanguage: newLanguage,
             apiUrl: config.apiUrl,
-            apiKey: config.apiKey,
+            apiKey: config.apiKey
         });
 
-        if (response && response.translatedText) {
+        if (response.translatedText) {
             return response.translatedText;
-        } else {
-            throw new Error(response?.error?.message || 'Unknown translation error');
         }
+        throw new Error(response.error?.message || 'Translation failed');
     }
 
-    /**
-     * Sets a timeout to automatically close the translation popup after a certain time.
-     */
     setPopupTimeout(popup) {
         popup.timeoutId = setTimeout(() => {
-            if (document.body.contains(popup)) {
-                popup.remove();
-            }
+            if (document.body.contains(popup)) popup.remove();
         }, 15000);
     }
 
-
-    /**
-     * Resets the timeout for the translation popup when the content changes (e.g., retranslation).
-     */
     resetPopupTimeout(popup) {
         clearTimeout(popup.timeoutId);
         this.setPopupTimeout(popup);
     }
 
-
-    /**
-     * Handles errors by displaying an appropriate message, such as connection issues or unexpected errors.
-     */
     handleError(error) {
         if (error.message.includes('Extension context invalidated')) {
-            this.createErrorPopup("The extension has been updated or reloaded. Please refresh the page to continue using it.");
+            this.createErrorPopup('The extension has been updated or reloaded. Please refresh the page.');
+        } else if (error.message.includes('Rate limit exceeded')) {
+            this.createErrorPopup(
+                'Translation rate limit exceeded. Please wait a moment, use a different API instance, or check your API key.',
+                true
+            );
         } else {
-            alert("Error: " + error.message);
+            this.createErrorPopup(`Error: ${error.message}`);
         }
     }
 
-    /**
-     * Toggles the plugin status between active and inactive.
-     */
     togglePluginStatus(forceState = null) {
         this.state.isPluginActive = forceState !== null ? forceState : !this.state.isPluginActive;
-        chrome.storage.local.set({isPluginActive: this.state.isPluginActive}, () => {
+        chrome.storage.local.set({ isPluginActive: this.state.isPluginActive }, () => {
             if (chrome.runtime.lastError) {
-                alert("Error updating plugin status: " + chrome.runtime.lastError.message);
+                this.createErrorPopup(`Error updating plugin status: ${chrome.runtime.lastError.message}`);
             } else {
                 this.createSuccessPopup(`Plugin ${this.state.isPluginActive ? 'Activated' : 'Deactivated'}`);
             }
         });
     }
 
-    /**
-     * Creates and displays a banner for messages (e.g., success or error).
-     * @param {string} message - The message to display in the banner.
-     * @param {string} backgroundColor - The background color of the banner.
-     * @param {string} textColor - The text color of the banner.
-     */
-    createBanner(message, backgroundColor = '#ff0000', textColor = 'white') {
+    createBanner(message, backgroundColor = '#ff0000', textColor = 'white', showRefresh = false) {
         const banner = document.createElement('div');
         banner.className = 'dynamic-banner';
         banner.style.position = 'fixed';
@@ -428,7 +342,6 @@ class TranslationManager {
         banner.style.fontFamily = 'Arial, sans-serif';
         banner.textContent = message;
 
-        // Close button
         const closeButton = document.createElement('button');
         closeButton.textContent = '×';
         closeButton.style.marginLeft = '10px';
@@ -439,74 +352,48 @@ class TranslationManager {
         closeButton.style.cursor = 'pointer';
         closeButton.addEventListener('click', () => banner.remove());
 
-        // Refresh button
-        const refreshButton = document.createElement('button');
-        refreshButton.textContent = 'Refresh';
-        refreshButton.style.marginLeft = '10px';
-        refreshButton.style.padding = '5px 10px';
-        refreshButton.style.background = 'white';
-        refreshButton.style.color = backgroundColor; // Match button text color to banner background
-        refreshButton.style.border = 'none';
-        refreshButton.style.borderRadius = '3px';
-        refreshButton.style.cursor = 'pointer';
-        refreshButton.addEventListener('click', () => window.location.reload());
-
-        // Append buttons to banner
-        banner.appendChild(refreshButton);
         banner.appendChild(closeButton);
 
-        // Add banner to the document body
-        document.body.appendChild(banner);
+        if (showRefresh) {
+            const refreshButton = document.createElement('button');
+            refreshButton.textContent = 'Refresh';
+            refreshButton.style.marginLeft = '10px';
+            refreshButton.style.padding = '5px 10px';
+            refreshButton.style.background = 'white';
+            refreshButton.style.color = backgroundColor;
+            refreshButton.style.border = 'none';
+            refreshButton.style.borderRadius = '3px';
+            refreshButton.style.cursor = 'pointer';
+            refreshButton.addEventListener('click', () => window.location.reload());
+            banner.appendChild(refreshButton);
+        }
 
-        // Automatically remove the banner after 5 seconds
+        document.body.appendChild(banner);
         setTimeout(() => {
-            if (banner.parentElement) {
-                banner.remove();
-            }
+            if (banner.parentElement) banner.remove();
         }, 5000);
     }
 
-    /**
-     * Creates and displays a success banner.
-     * @param {string} message - The success message to display.
-     */
     createSuccessPopup(message) {
-        this.createBanner(message, '#28a745', 'white'); // Green background with white text
+        this.createBanner(message, '#28a745', 'white');
     }
 
-    /**
-     * Creates and displays an error banner.
-     * @param {string} message - The error message to display.
-     */
-    createErrorPopup(message) {
-        this.createBanner(message, '#ff0000', 'white'); // Red background with white text
+    createErrorPopup(message, showRefresh = false) {
+        this.createBanner(message, '#ff0000', 'white', showRefresh);
     }
-
 }
-
 
 /**
  * Class representing the API Test Popup interface.
  */
 class ApiTestPopup {
-
-    /**
-     * Initializes the API Test Popup instance.
-     * - `apiList`: Stores the list of APIs added by the user.
-     * - `testHistory`: Stores the history of API tests.
-     */
     constructor() {
         this.apiList = [];
         this.testHistory = [];
         this.loadFromCache();
     }
 
-    /**
-     * Creates and displays the API Test Popup interface.
-     */
     createApiTestListPopup() {
-
-        // Create main container with improved styling
         const popupContainer = document.createElement('div');
         popupContainer.style.position = 'fixed';
         popupContainer.style.top = '50%';
@@ -526,7 +413,6 @@ class ApiTestPopup {
         popupContainer.style.flexDirection = 'column';
         popupContainer.style.gap = '15px';
 
-        // Title with improved styling
         const title = document.createElement('h2');
         title.textContent = 'API Test Manager LibreTranslate';
         title.style.margin = '0 0 10px 0';
@@ -535,7 +421,6 @@ class ApiTestPopup {
         title.style.fontSize = '24px';
         title.style.fontWeight = 'bold';
 
-        // Close button with improved styling
         const closeButton = document.createElement('button');
         closeButton.textContent = '✕';
         closeButton.style.position = 'absolute';
@@ -548,7 +433,6 @@ class ApiTestPopup {
         closeButton.style.cursor = 'pointer';
         closeButton.style.padding = '5px 10px';
         closeButton.style.borderRadius = '4px';
-        closeButton.style.transition = 'all 0.2s';
         closeButton.onmouseover = () => {
             closeButton.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
             closeButton.style.color = '#fff';
@@ -557,9 +441,8 @@ class ApiTestPopup {
             closeButton.style.backgroundColor = 'transparent';
             closeButton.style.color = '#aaa';
         };
-        closeButton.onclick = () => document.body.removeChild(popupContainer);
+        closeButton.onclick = () => popupContainer.remove();
 
-        // Create tabbed interface
         const tabsContainer = document.createElement('div');
         tabsContainer.style.display = 'flex';
         tabsContainer.style.borderBottom = '1px solid #444';
@@ -605,7 +488,6 @@ class ApiTestPopup {
         tabsContainer.appendChild(apiListTab);
         tabsContainer.appendChild(historyTab);
 
-        // Create form for adding new APIs with improved styling
         const formContainer = document.createElement('div');
         formContainer.style.display = 'flex';
         formContainer.style.flexDirection = 'column';
@@ -635,20 +517,14 @@ class ApiTestPopup {
         addButton.style.cursor = 'pointer';
         addButton.style.fontSize = '14px';
         addButton.style.fontWeight = 'bold';
-        addButton.style.transition = 'background-color 0.2s';
-        addButton.onmouseover = () => {
-            addButton.style.backgroundColor = '#3a87e0';
-        };
-        addButton.onmouseout = () => {
-            addButton.style.backgroundColor = '#4c9aff';
-        };
+        addButton.onmouseover = () => addButton.style.backgroundColor = '#3a87e0';
+        addButton.onmouseout = () => addButton.style.backgroundColor = '#4c9aff';
 
         addButton.onclick = () => {
             const url = apiUrlInput.value.trim();
             const key = apiKeyInput.value.trim();
-
             if (url && key) {
-                this.apiList.push({url, key});
+                this.apiList.push({ url, key });
                 this.saveToCache();
                 apiUrlInput.value = '';
                 apiKeyInput.value = '';
@@ -661,23 +537,16 @@ class ApiTestPopup {
         formContainer.appendChild(apiKeyInput);
         formContainer.appendChild(addButton);
 
-        // API List with improved styling
         const apiListElement = document.createElement('div');
         apiListElement.style.display = 'flex';
         apiListElement.style.flexDirection = 'column';
         apiListElement.style.gap = '10px';
 
-
-        /**
-         * Updates the API list display.
-         * @param {HTMLElement} listElement - The container element where the API list will be displayed.
-         */
-        this.updateApiList = (listElement) => {
+        this.updateApiList = listElement => {
             listElement.innerHTML = '';
-
             if (this.apiList.length === 0) {
                 const emptyMessage = document.createElement('div');
-                emptyMessage.textContent = 'No APIs added yet. Add one above to get started.';
+                emptyMessage.textContent = 'No APIs added yet.';
                 emptyMessage.style.textAlign = 'center';
                 emptyMessage.style.color = '#aaa';
                 emptyMessage.style.padding = '20px';
@@ -686,7 +555,7 @@ class ApiTestPopup {
             }
 
             this.apiList.forEach((api, index) => {
-                if (!api || !api.url || !api.key) return;
+                if (!api?.url || !api?.key) return;
 
                 const apiCard = document.createElement('div');
                 apiCard.style.backgroundColor = '#3a3a3a';
@@ -696,7 +565,6 @@ class ApiTestPopup {
                 apiCard.style.flexDirection = 'column';
                 apiCard.style.gap = '10px';
 
-                // API Info
                 const apiInfo = document.createElement('div');
                 apiInfo.style.display = 'flex';
                 apiInfo.style.flexDirection = 'column';
@@ -711,7 +579,6 @@ class ApiTestPopup {
                 apiInfo.appendChild(urlElement);
                 apiInfo.appendChild(keyElement);
 
-                // Action buttons
                 const buttonsContainer = document.createElement('div');
                 buttonsContainer.style.display = 'flex';
                 buttonsContainer.style.gap = '10px';
@@ -724,8 +591,6 @@ class ApiTestPopup {
                     resultDiv.style.padding = '10px';
                     resultDiv.style.borderRadius = '4px';
                     resultDiv.style.backgroundColor = '#444';
-
-                    // Show loading message
                     resultDiv.textContent = '⏳ Testing connection...';
                     apiCard.appendChild(resultDiv);
 
@@ -733,17 +598,28 @@ class ApiTestPopup {
                         const response = await chrome.runtime.sendMessage({
                             action: 'testConnection',
                             apiUrl: api.url,
-                            apiKey: api.key,
+                            apiKey: api.key
                         });
 
-                        if (response.success) {
-                            resultDiv.style.backgroundColor = '#1e462a';
-                            resultDiv.textContent = `✅ Success: ${api.url}`;
-                        } else {
-                            resultDiv.style.backgroundColor = '#4e2828';
-                            resultDiv.textContent = `❌ Error: ${response.message}`;
-                        }
+                        this.testHistory.push({
+                            url: api.url,
+                            success: response.success,
+                            message: response.message,
+                            timestamp: Date.now()
+                        });
+                        this.saveToCache();
+
+                        resultDiv.style.backgroundColor = response.success ? '#1e462a' : '#4e2828';
+                        resultDiv.textContent = response.success ? `✅ Success: ${api.url}` : `❌ Error: ${response.message}`;
                     } catch (error) {
+                        this.testHistory.push({
+                            url: api.url,
+                            success: false,
+                            message: error.message || 'Unknown error',
+                            timestamp: Date.now()
+                        });
+                        this.saveToCache();
+
                         resultDiv.style.backgroundColor = '#4e2828';
                         resultDiv.textContent = `❌ Error: ${error.message || 'Unknown error'}`;
                     }
@@ -765,14 +641,8 @@ class ApiTestPopup {
             });
         };
 
-
-        /**
-         * Updates the test history view.
-         * @param {HTMLElement} historyContainer - The container element for the test history.
-         */
-        this.updateHistoryView = (historyContainer) => {
+        this.updateHistoryView = historyContainer => {
             historyContainer.innerHTML = '';
-
             if (this.testHistory.length === 0) {
                 const emptyMessage = document.createElement('div');
                 emptyMessage.textContent = 'No test history yet.';
@@ -826,31 +696,19 @@ class ApiTestPopup {
             historyContainer.appendChild(historyList);
         };
 
-        // Assemble content sections
         apiListContent.appendChild(formContainer);
         apiListContent.appendChild(apiListElement);
 
-        // Assemble popup
         popupContainer.appendChild(closeButton);
         popupContainer.appendChild(title);
         popupContainer.appendChild(tabsContainer);
         popupContainer.appendChild(apiListContent);
         popupContainer.appendChild(historyContent);
 
-        // Update API list
         this.updateApiList(apiListElement);
-
-        // Add popup to body
         document.body.appendChild(popupContainer);
     }
 
-
-    /**
-     * Creates a styled input field with a label.
-     * @param {string} label - The text for the input field label.
-     * @param {string} placeholder - The placeholder text for the input field.
-     * @returns {HTMLInputElement} The input element created.
-     */
     createStyledInput(label, placeholder) {
         const container = document.createElement('div');
         container.style.display = 'flex';
@@ -868,9 +726,6 @@ class ApiTestPopup {
         input.style.backgroundColor = '#444';
         input.style.color = '#fff';
         input.style.border = '1px solid #555';
-        input.style.outline = 'none';
-        input.style.border = '1px solid #555';
-        input.style.outline = 'none';
         input.style.borderRadius = '4px';
         input.style.fontSize = '14px';
         input.style.width = '100%';
@@ -878,17 +733,9 @@ class ApiTestPopup {
 
         container.appendChild(labelElement);
         container.appendChild(input);
-
         return input;
     }
 
-
-    /**
-     * Creates a styled action button.
-     * @param {string} text - The text for the button.
-     * @param {string} color - The background color of the button.
-     * @returns {HTMLButtonElement} The button element created.
-     */
     createActionButton(text, color) {
         const button = document.createElement('button');
         button.textContent = text;
@@ -901,46 +748,22 @@ class ApiTestPopup {
         button.style.fontSize = '14px';
         button.style.fontWeight = 'bold';
         button.style.flex = '1';
-        button.style.transition = 'filter 0.2s';
-        button.onmouseover = () => {
-            button.style.filter = 'brightness(85%)';
-        };
-        button.onmouseout = () => {
-            button.style.filter = 'brightness(100%)';
-        };
-
+        button.onmouseover = () => button.style.filter = 'brightness(85%)';
+        button.onmouseout = () => button.style.filter = 'brightness(100%)';
         return button;
     }
 
-
-    /**
-     * Masks an API key for security purposes by obfuscating parts of the key.
-     * @param {string} key - The API key to be masked.
-     * @returns {string} The masked API key.
-     */
     maskApiKey(key) {
         if (!key || key.length < 8) return key;
         return key.substring(0, 4) + '•'.repeat(Math.min(key.length - 8, 10)) + key.substring(key.length - 4);
     }
 
-
-    /**
-     * Loads the cached API list and test history from localStorage.
-     * @returns {void}
-     */
     loadFromCache() {
         try {
-            // Load API list
             const cachedApis = localStorage.getItem('apiTestList');
-            if (cachedApis) {
-                this.apiList = JSON.parse(cachedApis);
-            }
-
-            // Load test history
+            if (cachedApis) this.apiList = JSON.parse(cachedApis);
             const cachedHistory = localStorage.getItem('apiTestHistory');
-            if (cachedHistory) {
-                this.testHistory = JSON.parse(cachedHistory);
-            }
+            if (cachedHistory) this.testHistory = JSON.parse(cachedHistory);
         } catch (error) {
             console.error('Error loading from cache:', error);
             this.apiList = [];
@@ -948,10 +771,6 @@ class ApiTestPopup {
         }
     }
 
-    /**
-     * Saves the API list and test history to localStorage.
-     * @returns {void}
-     */
     saveToCache() {
         try {
             localStorage.setItem('apiTestList', JSON.stringify(this.apiList));
@@ -960,9 +779,6 @@ class ApiTestPopup {
             console.error('Error saving to cache:', error);
         }
     }
-
 }
 
-
-// Instantiate the TranslationManager when the script is loaded.
 new TranslationManager();
