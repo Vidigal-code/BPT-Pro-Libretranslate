@@ -67,7 +67,7 @@ async function translateText(text, targetLanguage, apiUrl, apiKey) {
     const data = await response.json();
 
     if (data.error) {
-        console.error('Translation API error:', data.error);
+       // console.error('Translation API error:', data.error);
         return `Error: ${data.error}`;
     }
 

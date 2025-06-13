@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "BPT-Pro-Libretranslate",
   "description":"An open-source browser translation plugin offers real-time translation, supports multiple languages, and automatically detects and translates text into the user’s preferred language. It uses the LibreTranslate API and is continuously improved by the community to stay updated and optimized.",
-  "version": "2.0",
+  "version": "3.0",
   "permissions": [
     "activeTab",
     "storage"

@@ -179,7 +179,7 @@ class TranslationManager {
                     }
                 );
             } catch (error) {
-                console.error("Unexpected error:", error);
+               // console.error("Unexpected error:", error);
                 reject(new Error("Extension context invalidated or unexpected error occurred."));
             }
         });
@@ -962,7 +962,7 @@ class ApiTestPopup {
                 this.testHistory = JSON.parse(cachedHistory);
             }
         } catch (error) {
-            console.error('Error loading from cache:', error);
+           // console.error('Error loading from cache:', error);
             this.apiList = [];
             this.testHistory = [];
         }
