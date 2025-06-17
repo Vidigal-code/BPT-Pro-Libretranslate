@@ -252,6 +252,6 @@ class ApiTest {
 }
 
 
-// Initialize the PopupManager when the script is executed.
+// Initialize PopupManager
 new PopupManager();
 

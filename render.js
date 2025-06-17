@@ -1235,4 +1235,6 @@ class ApiTestPopup {
     }
 }
 
+// Initialize TranslationManager
 new TranslationManager();
+
